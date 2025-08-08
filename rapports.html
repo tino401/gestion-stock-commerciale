@@ -1,0 +1,282 @@
+{% extends "base.html" %}
+
+{% block title %}Rapports - Gestion Commerciale{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h1 class="mb-4">Rapports et Statistiques</h1>
+    </div>
+</div>
+
+<!-- Graphique des ventes mensuelles -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-chart-line me-2"></i>
+                    Évolution des ventes (12 derniers mois)
+                </h5>
+            </div>
+            <div class="card-body">
+                <canvas id="ventesChart" height="100"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Statistiques en colonnes -->
+<div class="row mb-4">
+    <!-- Produits les plus vendus -->
+    <div class="col-md-6">
+        <div class="card h-100">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-trophy me-2"></i>
+                    Produits les plus vendus
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if produits_vendus %}
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Rang</th>
+                                <th>Produit</th>
+                                <th>Quantité vendue</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for produit in produits_vendus %}
+                            <tr>
+                                <td>
+                                    {% if loop.index <= 3 %}
+                                    <span class="badge bg-warning">{{ loop.index }}</span>
+                                    {% else %}
+                                    {{ loop.index }}
+                                    {% endif %}
+                                </td>
+                                <td>{{ produit[0] }}</td>
+                                <td>{{ produit[1] }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-muted">Aucune donnée de vente disponible.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Clients les plus actifs -->
+    <div class="col-md-6">
+        <div class="card h-100">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-users me-2"></i>
+                    Clients les plus actifs
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if clients_actifs %}
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Rang</th>
+                                <th>Client</th>
+                                <th>Nb ventes</th>
+                                <th>Total achats</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for client in clients_actifs %}
+                            <tr>
+                                <td>
+                                    {% if loop.index <= 3 %}
+                                    <span class="badge bg-success">{{ loop.index }}</span>
+                                    {% else %}
+                                    {{ loop.index }}
+                                    {% endif %}
+                                </td>
+                                <td>{{ client[0] }}</td>
+                                <td>{{ client[1] }}</td>
+                                <td>{{ "{:,.0f}".format(client[2]).replace(',', ' ') }} MGA</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-muted">Aucune donnée de client disponible.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Graphique des ventes par produit -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-chart-pie me-2"></i>
+                    Répartition des ventes par produits (Top 10)
+                </h5>
+            </div>
+            <div class="card-body">
+                <canvas id="produitsChart" height="80"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Résumé mensuel -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-calendar me-2"></i>
+                    Résumé des 12 derniers mois
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Mois</th>
+                                <th>Chiffre d'affaires</th>
+                                <th>Évolution</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for i in range(ventes_mensuelles|length) %}
+                            {% set mois_actuel = ventes_mensuelles[i] %}
+                            {% set mois_precedent = ventes_mensuelles[i-1] if i > 0 else None %}
+                            <tr>
+                                <td>{{ mois_actuel.mois }}</td>
+                                <td>{{ "{:,.0f}".format(mois_actuel.total).replace(',', ' ') }} MGA</td>
+                                <td>
+                                    {% if mois_precedent and mois_precedent.total > 0 %}
+                                    {% set evolution = ((mois_actuel.total - mois_precedent.total) / mois_precedent.total * 100) %}
+                                    {% if evolution > 0 %}
+                                    <span class="text-success">
+                                        <i class="fas fa-arrow-up"></i> +{{ "%.1f"|format(evolution) }}%
+                                    </span>
+                                    {% elif evolution < 0 %}
+                                    <span class="text-danger">
+                                        <i class="fas fa-arrow-down"></i> {{ "%.1f"|format(evolution) }}%
+                                    </span>
+                                    {% else %}
+                                    <span class="text-muted">
+                                        <i class="fas fa-minus"></i> 0%
+                                    </span>
+                                    {% endif %}
+                                    {% else %}
+                                    <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+// Graphique des ventes mensuelles
+const ventesData = {{ ventes_mensuelles | tojson }};
+const ventesLabels = ventesData.map(item => item.mois);
+const ventesValues = ventesData.map(item => item.total);
+
+const ventesCtx = document.getElementById('ventesChart').getContext('2d');
+new Chart(ventesCtx, {
+    type: 'line',
+    data: {
+        labels: ventesLabels,
+        datasets: [{
+            label: 'Ventes (MGA)',
+            data: ventesValues,
+            borderColor: 'rgb(54, 162, 235)',
+            backgroundColor: 'rgba(54, 162, 235, 0.1)',
+            tension: 0.1,
+            fill: true
+        }]
+    },
+    options: {
+        responsive: true,
+        scales: {
+            y: {
+                beginAtZero: true,
+                ticks: {
+                    callback: function(value) {
+                        return new Intl.NumberFormat('fr-FR').format(value) + ' MGA';
+                    }
+                }
+            }
+        },
+        plugins: {
+            tooltip: {
+                callbacks: {
+                    label: function(context) {
+                        return context.dataset.label + ': ' + 
+                               new Intl.NumberFormat('fr-FR').format(context.parsed.y) + ' MGA';
+                    }
+                }
+            }
+        }
+    }
+});
+
+// Graphique des produits les plus vendus
+const produitsData = {{ produits_vendus | tojson }};
+const produitsLabels = produitsData.map(item => item[0]);
+const produitsValues = produitsData.map(item => item[1]);
+
+const produitsCtx = document.getElementById('produitsChart').getContext('2d');
+new Chart(produitsCtx, {
+    type: 'doughnut',
+    data: {
+        labels: produitsLabels,
+        datasets: [{
+            data: produitsValues,
+            backgroundColor: [
+                '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0',
+                '#9966FF', '#FF9F40', '#FF6384', '#C9CBCF',
+                '#4BC0C0', '#FF6384'
+            ]
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: {
+            legend: {
+                position: 'right'
+            },
+            tooltip: {
+                callbacks: {
+                    label: function(context) {
+                        return context.label + ': ' + context.parsed + ' unités';
+                    }
+                }
+            }
+        }
+    }
+});
+</script>
+{% endblock %}

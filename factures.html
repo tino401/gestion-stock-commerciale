@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+
+{% block title %}Factures - Gestion Commerciale{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>Gestion des Factures</h1>
+    <a href="{{ url_for('ventes.nouvelle_vente') }}" class="btn btn-primary">
+        <i class="fas fa-plus me-1"></i>Nouvelle vente
+    </a>
+</div>
+
+<!-- Filtres -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="GET" class="row g-3">
+            <div class="col-md-10">
+                <label for="statut" class="form-label">Filtrer par statut</label>
+                <select class="form-select" id="statut" name="statut">
+                    <option value="">Tous les statuts</option>
+                    <option value="impayée" {% if request.args.get('statut') == 'impayée' %}selected{% endif %}>Impayée</option>
+                    <option value="payée" {% if request.args.get('statut') == 'payée' %}selected{% endif %}>Payée</option>
+                    <option value="en_retard" {% if request.args.get('statut') == 'en_retard' %}selected{% endif %}>En retard</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">&nbsp;</label>
+                <button type="submit" class="btn btn-secondary w-100">
+                    <i class="fas fa-filter me-1"></i>Filtrer
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Liste des factures -->
+<div class="card">
+    <div class="card-body">
+        {% if factures %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>N° Facture</th>
+                        <th>Client</th>
+                        <th>Date</th>
+                        <th>Échéance</th>
+                        <th>Montant</th>
+                        <th>Statut</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for facture in factures %}
+                    <tr {% if facture.statut == 'en_retard' %}class="table-danger"{% endif %}>
+                        <td><strong>{{ facture.numero_facture }}</strong></td>
+                        <td>{{ facture.vente.client.nom }}</td>
+                        <td>{{ facture.date_facture.strftime('%d/%m/%Y') }}</td>
+                        <td>
+                            {% if facture.date_echeance %}
+                            {{ facture.date_echeance.strftime('%d/%m/%Y') }}
+                            {% else %}
+                            <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ "{:,.0f}".format(facture.vente.total_ttc).replace(',', ' ') }} MGA</td>
+                        <td>
+                            {% if facture.statut == 'payée' %}
+                            <span class="badge bg-success">Payée</span>
+                            {% elif facture.statut == 'en_retard' %}
+                            <span class="badge bg-danger">En retard</span>
+                            {% else %}
+                            <span class="badge bg-warning text-dark">Impayée</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="btn-group" role="group">
+                                <a href="{{ url_for('base.facture_detail', id=facture.id) }}" 
+                                   class="btn btn-sm btn-outline-primary" title="Voir les détails">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                <a href="{{ url_for('base.facture_pdf', id=facture.id) }}" 
+                                   class="btn btn-sm btn-outline-danger" title="Télécharger PDF" target="_blank">
+                                    <i class="fas fa-file-pdf"></i>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- Statistiques des factures -->
+        <div class="row mt-4">
+            <div class="col-md-12">
+                <div class="card bg-light">
+                    <div class="card-body">
+                        <div class="row text-center">
+                            <div class="col-md-3">
+                                <h6 class="text-muted">Total factures</h6>
+                                <strong>{{ factures|length }}</strong>
+                            </div>
+                            <div class="col-md-3">
+                                <h6 class="text-muted">Payées</h6>
+                                <strong class="text-success">{{ factures|selectattr('statut', 'equalto', 'payée')|list|length }}</strong>
+                            </div>
+                            <div class="col-md-3">
+                                <h6 class="text-muted">Impayées</h6>
+                                <strong class="text-warning">{{ factures|selectattr('statut', 'equalto', 'impayée')|list|length }}</strong>
+                            </div>
+                            <div class="col-md-3">
+                                <h6 class="text-muted">En retard</h6>
+                                <strong class="text-danger">{{ factures|selectattr('statut', 'equalto', 'en_retard')|list|length }}</strong>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        {% else %}
+        <div class="text-center py-5">
+            <i class="fas fa-file-invoice fa-3x text-muted mb-3"></i>
+            <h5 class="text-muted">Aucune facture trouvée</h5>
+            <p class="text-muted">Les factures sont générées automatiquement lors de la création des ventes.</p>
+            <a href="{{ url_for('nouvelle_vente') }}" class="btn btn-primary">
+                <i class="fas fa-plus me-1"></i>Créer une vente
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

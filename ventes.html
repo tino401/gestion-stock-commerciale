@@ -1,0 +1,152 @@
+{% extends "base.html" %}
+
+{% block title %}Ventes - Gestion Commerciale{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>Historique des Ventes</h1>
+    <a href="{{ url_for('ventes.nouvelle_vente') }}" class="btn btn-primary">
+        <i class="fas fa-plus me-1"></i>Nouvelle vente
+    </a>
+</div>
+
+<!-- Filtres de recherche -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="GET" class="row g-3">
+            <div class="col-md-3">
+                <label for="date_debut" class="form-label">Date de début</label>
+                <input type="date" class="form-control" id="date_debut" name="date_debut" 
+                       value="{{ request.args.get('date_debut', '') }}">
+            </div>
+            <div class="col-md-3">
+                <label for="date_fin" class="form-label">Date de fin</label>
+                <input type="date" class="form-control" id="date_fin" name="date_fin" 
+                       value="{{ request.args.get('date_fin', '') }}">
+            </div>
+            <div class="col-md-4">
+                <label for="client_id" class="form-label">Client</label>
+                <select class="form-select" id="client_id" name="client_id">
+                    <option value="">Tous les clients</option>
+                    {% for client in clients %}
+                    <option value="{{ client.id }}" 
+                            {% if request.args.get('client_id') == client.id|string %}selected{% endif %}>
+                        {{ client.nom }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">&nbsp;</label>
+                <button type="submit" class="btn btn-secondary w-100">
+                    <i class="fas fa-search me-1"></i>Filtrer
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Liste des ventes -->
+<div class="card">
+    <div class="card-body">
+        {% if ventes %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>N° Vente</th>
+                        <th>Client</th>
+                        <th>Date</th>
+                        <th>Montant TTC</th>
+                        <th>Statut</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for vente in ventes %}
+                    <tr>
+                        <td><strong>{{ vente.numero_vente }}</strong></td>
+                        <td>{{ vente.client.nom }}</td>
+                        <td>{{ vente.date_vente.strftime('%d/%m/%Y %H:%M') }}</td>
+                        <td>{{ "{:,.0f}".format(vente.total_ttc).replace(',', ' ') }} MGA</td>
+                        <td>
+                            {% if vente.statut == 'confirmée' %}
+                            <span class="badge bg-success">Confirmée</span>
+                            {% else %}
+                            <span class="badge bg-danger">Annulée</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="btn-group" role="group">
+                                {% if vente.facture %}
+                                <a href="{{ url_for('base.facture_detail', id=vente.facture.id) }}" 
+                                   class="btn btn-sm btn-outline-info" title="Voir la facture">
+                                    <i class="fas fa-file-invoice"></i>
+                                </a>
+                                {% endif %}
+                                <button type="button" class="btn btn-sm btn-outline-primary" 
+                                        onclick="voirDetails({{ vente.id }})" title="Voir les détails">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- Résumé des totaux -->
+        <div class="row mt-4">
+            <div class="col-md-6 offset-md-6">
+                <div class="card bg-light">
+                    <div class="card-body">
+                        <h6>Résumé des ventes filtrées:</h6>
+                        {% set total_filtres = ventes|selectattr('statut', 'equalto', 'confirmée')|map(attribute='total_ttc')|sum %}
+                        <strong>Total: {{ "{:,.0f}".format(total_filtres).replace(',', ' ') }} MGA</strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        {% else %}
+        <div class="text-center py-5">
+            <i class="fas fa-shopping-cart fa-3x text-muted mb-3"></i>
+            <h5 class="text-muted">Aucune vente trouvée</h5>
+            <p class="text-muted">Commencez par créer votre première vente.</p>
+            <a href="{{ url_for('ventes.nouvelle_vente') }}" class="btn btn-primary">
+                <i class="fas fa-plus me-1"></i>Nouvelle vente
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Modal des détails de vente -->
+<div class="modal fade" id="detailsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Détails de la vente</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="detailsContent">
+                <!-- Contenu chargé dynamiquement -->
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function voirDetails(venteId) {
+    // Cette fonction pourrait charger les détails via AJAX
+    // Pour simplifier, on redirige vers la facture si elle existe
+    const vente = {{ ventes|tojson }}.find(v => v.id === venteId);
+    if (vente && vente.facture) {
+        window.location.href = '/factures/' + vente.facture.id;
+    }
+}
+</script>
+{% endblock %}

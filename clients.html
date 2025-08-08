@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+
+{% block title %}Clients - Gestion Commerciale{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>Gestion des Clients</h1>
+    <a href="{{ url_for('clients.ajouter_client') }}" class="btn btn-primary">
+        <i class="fas fa-plus me-1"></i>Ajouter un client
+    </a>
+</div>
+
+<!-- Recherche -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="GET" class="row g-3">
+            <div class="col-md-10">
+                <label for="search" class="form-label">Rechercher un client</label>
+                <input type="text" class="form-control" id="search" name="search" 
+                       value="{{ request.args.get('search', '') }}" 
+                       placeholder="Nom du client...">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">&nbsp;</label>
+                <button type="submit" class="btn btn-secondary w-100">
+                    <i class="fas fa-search me-1"></i>Rechercher
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Liste des clients -->
+<div class="card">
+    <div class="card-body">
+        {% if clients %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Nom</th>
+                        <th>Contact</th>
+                        <th>Adresse</th>
+                        <th>Date création</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for client in clients %}
+                    <tr>
+                        <td>
+                            <strong>{{ client.nom }}</strong>
+                        </td>
+                        <td>
+                            {% if client.email %}
+                            <div><i class="fas fa-envelope me-1"></i>{{ client.email }}</div>
+                            {% endif %}
+                            {% if client.telephone %}
+                            <div><i class="fas fa-phone me-1"></i>{{ client.telephone }}</div>
+                            {% endif %}
+                            {% if not client.email and not client.telephone %}
+                            <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if client.adresse %}
+                            {{ client.adresse }}
+                            {% if client.ville %}, {{ client.ville }}{% endif %}
+                            {% if client.code_postal %} {{ client.code_postal }}{% endif %}
+                            {% else %}
+                            <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ client.date_creation.strftime('%d/%m/%Y') }}</td>
+                        <td>
+                            <div class="btn-group" role="group">
+                                <a href="{{ url_for('ventes.ventes', client_id=client.id) }}" 
+                                   class="btn btn-sm btn-outline-info" title="Voir les ventes">
+                                    <i class="fas fa-shopping-cart"></i>
+                                </a>
+                                <button type="button" class="btn btn-sm btn-outline-danger" 
+                                        onclick="confirmerSuppression({{ client.id }}, '{{ client.nom }}')">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5">
+            <i class="fas fa-users fa-3x text-muted mb-3"></i>
+            <h5 class="text-muted">Aucun client trouvé</h5>
+            <p class="text-muted">Commencez par ajouter votre premier client.</p>
+            <a href="{{ url_for('clients.ajouter_client') }}" class="btn btn-primary">
+                <i class="fas fa-plus me-1"></i>Ajouter un client
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Modal de confirmation de suppression -->
+<div class="modal fade" id="confirmModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirmer la suppression</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                Êtes-vous sûr de vouloir supprimer le client "<span id="clientNom"></span>" ?
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                <form method="POST" id="deleteForm" class="d-inline">
+                    <button type="submit" class="btn btn-danger">Supprimer</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function confirmerSuppression(id, nom) {
+    document.getElementById('clientNom').textContent = nom;
+    document.getElementById('deleteForm').action = "{{ url_for('clients.supprimer_client', id='__ID__') }}".replace('__ID__', id);
+    new bootstrap.Modal(document.getElementById('confirmModal')).show();
+}
+</script>
+{% endblock %}

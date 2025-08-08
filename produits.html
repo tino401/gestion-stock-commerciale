@@ -1,0 +1,152 @@
+{% extends "base.html" %}
+
+{% block title %}Produits - Gestion Commerciale{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>Gestion des Produits</h1>
+    <a href="{{ url_for('produits.ajouter_produit') }}" class="btn btn-primary">
+        <i class="fas fa-plus me-1"></i>Ajouter un produit
+    </a>
+</div>
+
+<!-- Filtres de recherche -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="GET" class="row g-3">
+            <div class="col-md-6">
+                <label for="search" class="form-label">Rechercher</label>
+                <input type="text" class="form-control" id="search" name="search" 
+                       value="{{ request.args.get('search', '') }}" 
+                       placeholder="Nom du produit...">
+            </div>
+            <div class="col-md-4">
+                <label for="categorie" class="form-label">Catégorie</label>
+                <select class="form-select" id="categorie" name="categorie">
+                    <option value="">Toutes les catégories</option>
+                    {% for cat in categories %}
+                    <option value="{{ cat }}" 
+                            {% if request.args.get('categorie') == cat %}selected{% endif %}>
+                        {{ cat }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">&nbsp;</label>
+                <button type="submit" class="btn btn-secondary w-100">
+                    <i class="fas fa-search me-1"></i>Filtrer
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Liste des produits -->
+<div class="card">
+    <div class="card-body">
+        {% if produits %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Code</th>
+                        <th>Nom</th>
+                        <th>Catégorie</th>
+                        <th>Prix unitaire</th>
+                        <th>Stock</th>
+                        <th>Statut</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for produit in produits %}
+                    <tr {% if produit.stock_faible %}class="table-warning"{% endif %}>
+                        <td>{{ produit.code_produit or '-' }}</td>
+                        <td>
+                            <strong>{{ produit.nom }}</strong>
+                            {% if produit.description %}
+                            <br><small class="text-muted">{{ produit.description[:50] }}{% if produit.description|length > 50 %}...{% endif %}</small>
+                            {% endif %}
+                        </td>
+                        <td>{{ produit.categorie or '-' }}</td>
+                        <td>{{ "{:,.0f}".format(produit.prix_unitaire).replace(',', ' ') }} MGA</td>
+                        <td>
+                            {% if produit.stock_faible %}
+                            <span class="badge bg-warning text-dark">
+                                {{ produit.stock_actuel }} / {{ produit.stock_minimum }}
+                            </span>
+                            {% else %}
+                            <span class="badge bg-success">{{ produit.stock_actuel }}</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if produit.stock_faible %}
+                            <span class="badge bg-warning">
+                                <i class="fas fa-exclamation-triangle me-1"></i>Stock faible
+                            </span>
+                            {% else %}
+                            <span class="badge bg-success">OK</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="btn-group" role="group">
+                                <a href="{{ url_for('produits.modifier_produit', id=produit.id) }}" 
+                                   class="btn btn-sm btn-outline-primary">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                <button type="button" class="btn btn-sm btn-outline-danger" 
+                                        onclick="confirmerSuppression({{ produit.id }}, '{{ produit.nom }}')">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5">
+            <i class="fas fa-box fa-3x text-muted mb-3"></i>
+            <h5 class="text-muted">Aucun produit trouvé</h5>
+            <p class="text-muted">Commencez par ajouter votre premier produit.</p>
+            <a href="{{ url_for('produits.ajouter_produit') }}" class="btn btn-primary">
+                <i class="fas fa-plus me-1"></i>Ajouter un produit
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Modal de confirmation de suppression -->
+<div class="modal fade" id="confirmModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirmer la suppression</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                Êtes-vous sûr de vouloir supprimer le produit "<span id="produitNom"></span>" ?
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                <form method="POST" id="deleteForm" class="d-inline">
+                    <button type="submit" class="btn btn-danger">Supprimer</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function confirmerSuppression(id, nom) {
+    document.getElementById('produitNom').textContent = nom;
+    document.getElementById('deleteForm').action = "{{ url_for('produits.supprimer_produit', id='__ID__') }}".replace('__ID__', id);
+    new bootstrap.Modal(document.getElementById('confirmModal')).show();
+}
+</script>
+{% endblock %}

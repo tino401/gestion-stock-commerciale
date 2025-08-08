@@ -1,0 +1,276 @@
+{% extends "base.html" %}
+
+{% block title %}Nouvelle vente - Gestion Commerciale{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-shopping-cart me-2"></i>
+                    Créer une nouvelle vente
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" id="venteForm">
+                    <!-- Informations générales -->
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="client_id" class="form-label">Client *</label>
+                                <select class="form-select" id="client_id" name="client_id" required>
+                                    <option value="">Sélectionner un client</option>
+                                    {% for client in clients %}
+                                    <option value="{{ client.id }}">{{ client.nom }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="mb-3">
+                                <label for="taux_tva" class="form-label">Taux TVA (%)</label>
+                                <input type="number" class="form-control" id="taux_tva" name="taux_tva" 
+                                       value="20" step="0.1" min="0" max="100">
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="mb-3">
+                                <label class="form-label">Date</label>
+                                <input type="text" class="form-control" readonly 
+                                       value="{{ moment().format('DD/MM/YYYY HH:mm') }}">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Produits -->
+                    <div class="card mb-4">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h6 class="mb-0">Produits</h6>
+                            <button type="button" class="btn btn-sm btn-primary" onclick="ajouterLigne()">
+                                <i class="fas fa-plus me-1"></i>Ajouter un produit
+                            </button>
+                        </div>
+                        <div class="card-body">
+                            <div id="lignesProduits">
+                                <!-- Les lignes de produits seront ajoutées ici -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Totaux -->
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="notes" class="form-label">Notes</label>
+                                <textarea class="form-control" id="notes" name="notes" rows="3"></textarea>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card bg-light">
+                                <div class="card-body">
+                                    <div class="row mb-2">
+                                        <div class="col-8"><strong>Total HT:</strong></div>
+                                        <div class="col-4 text-end">
+                                            <span id="totalHT">0 MGA</span>
+                                        </div>
+                                    </div>
+                                    <div class="row mb-2">
+                                        <div class="col-8">TVA (<span id="tauxTVADisplay">20</span>%):</div>
+                                        <div class="col-4 text-end">
+                                            <span id="totalTVA">0 MGA</span>
+                                        </div>
+                                    </div>
+                                    <hr>
+                                    <div class="row">
+                                        <div class="col-8"><strong>Total TTC:</strong></div>
+                                        <div class="col-4 text-end">
+                                            <strong><span id="totalTTC">0 MGA</span></strong>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-between mt-4">
+                        <a href="{{ url_for('ventes') }}" class="btn btn-secondary">
+                            <i class="fas fa-times me-1"></i>Annuler
+                        </a>
+                        <button type="submit" class="btn btn-success" id="btnEnregistrer">
+                            <i class="fas fa-save me-1"></i>Créer la vente et générer la facture
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Template pour ligne de produit -->
+<template id="ligneProduitTemplate">
+    <div class="row ligne-produit mb-3">
+        <div class="col-md-5">
+            <select class="form-select produit-select" name="produit_id" onchange="changerProduit(this)" required>
+                <option value="">Sélectionner un produit</option>
+                {% for produit in produits %}
+                <option value="{{ produit.id }}" data-prix="{{ produit.prix_unitaire }}" data-stock="{{ produit.stock_actuel }}">
+                    {{ produit.nom }} (Stock: {{ produit.stock_actuel }})
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-2">
+            <input type="number" class="form-control quantite-input" name="quantite" 
+                   placeholder="Quantité" min="1" onchange="calculerSousTotal(this)" required>
+        </div>
+        <div class="col-md-2">
+            <input type="text" class="form-control prix-unitaire" readonly placeholder="Prix unitaire">
+        </div>
+        <div class="col-md-2">
+            <input type="text" class="form-control sous-total" readonly placeholder="Sous-total">
+        </div>
+        <div class="col-md-1">
+            <button type="button" class="btn btn-danger btn-sm w-100" onclick="supprimerLigne(this)">
+                <i class="fas fa-trash"></i>
+            </button>
+        </div>
+    </div>
+</template>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const produits = {{ produits|tojson }};
+let compteurLignes = 0;
+
+function ajouterLigne() {
+    const template = document.getElementById('ligneProduitTemplate');
+    const clone = template.content.cloneNode(true);
+    document.getElementById('lignesProduits').appendChild(clone);
+    compteurLignes++;
+}
+
+function supprimerLigne(button) {
+    const ligne = button.closest('.ligne-produit');
+    ligne.remove();
+    calculerTotaux();
+}
+
+function changerProduit(select) {
+    const ligne = select.closest('.ligne-produit');
+    const prixUnitaireInput = ligne.querySelector('.prix-unitaire');
+    const quantiteInput = ligne.querySelector('.quantite-input');
+    
+    if (select.value) {
+        const option = select.selectedOptions[0];
+        const prix = parseFloat(option.dataset.prix);
+        const stock = parseInt(option.dataset.stock);
+        
+        prixUnitaireInput.value = new Intl.NumberFormat('fr-FR').format(prix) + ' MGA';
+        quantiteInput.max = stock;
+        
+        if (stock === 0) {
+            quantiteInput.disabled = true;
+            quantiteInput.placeholder = 'Stock épuisé';
+        } else {
+            quantiteInput.disabled = false;
+            quantiteInput.placeholder = 'Max: ' + stock;
+        }
+    } else {
+        prixUnitaireInput.value = '';
+        quantiteInput.max = '';
+        quantiteInput.disabled = false;
+        quantiteInput.placeholder = 'Quantité';
+    }
+    
+    calculerSousTotal(select);
+}
+
+function calculerSousTotal(element) {
+    const ligne = element.closest('.ligne-produit');
+    const select = ligne.querySelector('.produit-select');
+    const quantiteInput = ligne.querySelector('.quantite-input');
+    const sousTotalInput = ligne.querySelector('.sous-total');
+    
+    if (select.value && quantiteInput.value) {
+        const option = select.selectedOptions[0];
+        const prix = parseFloat(option.dataset.prix);
+        const quantite = parseInt(quantiteInput.value);
+        const stock = parseInt(option.dataset.stock);
+        
+        if (quantite > stock) {
+            alert('Quantité demandée supérieure au stock disponible (' + stock + ')');
+            quantiteInput.value = stock;
+            return;
+        }
+        
+        const sousTotal = prix * quantite;
+        sousTotalInput.value = new Intl.NumberFormat('fr-FR').format(sousTotal) + ' MGA';
+    } else {
+        sousTotalInput.value = '';
+    }
+    
+    calculerTotaux();
+}
+
+function calculerTotaux() {
+    let totalHT = 0;
+    const lignes = document.querySelectorAll('.ligne-produit');
+    
+    lignes.forEach(ligne => {
+        const select = ligne.querySelector('.produit-select');
+        const quantiteInput = ligne.querySelector('.quantite-input');
+        
+        if (select.value && quantiteInput.value) {
+            const option = select.selectedOptions[0];
+            const prix = parseFloat(option.dataset.prix);
+            const quantite = parseInt(quantiteInput.value);
+            totalHT += prix * quantite;
+        }
+    });
+    
+    const tauxTVA = parseFloat(document.getElementById('taux_tva').value) || 0;
+    const totalTVA = totalHT * (tauxTVA / 100);
+    const totalTTC = totalHT + totalTVA;
+    
+    document.getElementById('totalHT').textContent = new Intl.NumberFormat('fr-FR').format(totalHT) + ' MGA';
+    document.getElementById('totalTVA').textContent = new Intl.NumberFormat('fr-FR').format(totalTVA) + ' MGA';
+    document.getElementById('totalTTC').textContent = new Intl.NumberFormat('fr-FR').format(totalTTC) + ' MGA';
+    document.getElementById('tauxTVADisplay').textContent = tauxTVA;
+}
+
+// Event listeners
+document.getElementById('taux_tva').addEventListener('input', calculerTotaux);
+
+// Validation du formulaire
+document.getElementById('venteForm').addEventListener('submit', function(e) {
+    const lignes = document.querySelectorAll('.ligne-produit');
+    if (lignes.length === 0) {
+        e.preventDefault();
+        alert('Veuillez ajouter au moins un produit à la vente.');
+        return;
+    }
+    
+    let produitSelectionne = false;
+    lignes.forEach(ligne => {
+        const select = ligne.querySelector('.produit-select');
+        const quantite = ligne.querySelector('.quantite-input');
+        if (select.value && quantite.value) {
+            produitSelectionne = true;
+        }
+    });
+    
+    if (!produitSelectionne) {
+        e.preventDefault();
+        alert('Veuillez sélectionner au moins un produit avec une quantité.');
+        return;
+    }
+});
+
+// Ajouter une ligne par défaut au chargement
+document.addEventListener('DOMContentLoaded', function() {
+    ajouterLigne();
+});
+</script>
+{% endblock %}

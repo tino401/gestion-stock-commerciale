@@ -1,0 +1,154 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h1 class="mb-4">Tableau de Bord</h1>
+    </div>
+</div>
+
+<!-- Statistiques générales -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card bg-primary text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h5 class="card-title">Produits</h5>
+                        <h2>{{ total_produits }}</h2>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-box fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card bg-success text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h5 class="card-title">Clients</h5>
+                        <h2>{{ total_clients }}</h2>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-users fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card bg-info text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h5 class="card-title">Ventes du jour</h5>
+                        <h2>{{ "{:,.0f}".format(ventes_jour).replace(',', ' ') }} MGA</h2>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-calendar-day fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card bg-warning text-dark">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h5 class="card-title">Ventes du mois</h5>
+                        <h2>{{ "{:,.0f}".format(ventes_mois).replace(',', ' ') }} MGA</h2>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-calendar-alt fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Actions rapides -->
+<div class="row mb-4">
+    <div class="col-12">
+        <h3>Actions Rapides</h3>
+    </div>
+    <div class="col-md-3 mb-3">
+        <a href="{{ url_for('ventes.nouvelle_vente') }}" class="btn btn-primary w-100 py-3">
+            <i class="fas fa-plus-circle fa-2x d-block mb-2"></i>
+            Nouvelle Vente
+        </a>
+    </div>
+    <div class="col-md-3 mb-3">
+        <a href="{{ url_for('produits.ajouter_produit') }}" class="btn btn-success w-100 py-3">
+            <i class="fas fa-box fa-2x d-block mb-2"></i>
+            Ajouter Produit
+        </a>
+    </div>
+    <div class="col-md-3 mb-3">
+        <a href="{{ url_for('clients.ajouter_client') }}" class="btn btn-info w-100 py-3">
+            <i class="fas fa-user-plus fa-2x d-block mb-2"></i>
+            Ajouter Client
+        </a>
+    </div>
+    <div class="col-md-3 mb-3">
+        <a href="{{ url_for('base.factures') }}" class="btn btn-secondary w-100 py-3">
+            <i class="fas fa-file-invoice fa-2x d-block mb-2"></i>
+            Voir Factures
+        </a>
+    </div>
+</div>
+
+<!-- Alertes de stock faible -->
+{% if produits_stock_faible %}
+<div class="row">
+    <div class="col-12">
+        <div class="card border-warning">
+            <div class="card-header bg-warning text-dark">
+                <h5 class="mb-0">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    Alertes de Stock Faible
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Produit</th>
+                                <th>Stock Actuel</th>
+                                <th>Stock Minimum</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for produit in produits_stock_faible %}
+                            <tr>
+                                <td>{{ produit.nom }}</td>
+                                <td>
+                                    <span class="badge bg-danger">{{ produit.stock_actuel }}</span>
+                                </td>
+                                <td>{{ produit.stock_minimum }}</td>
+                                <td>
+                                    <a href="{{ url_for('produits.modifier_produit', id=produit.id) }}" 
+                                       class="btn btn-sm btn-outline-primary">
+                                        Modifier
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
